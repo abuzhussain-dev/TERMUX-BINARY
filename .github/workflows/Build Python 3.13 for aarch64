@@ -1,0 +1,32 @@
+name: Build Python 3.13 for aarch64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev zlib1g-dev \
+            libffi-dev libbz2-dev libreadline-dev libsqlite3-dev liblzma-dev \
+            libncurses-dev libuuid-dev wget
+
+      - name: Download, build and package
+        run: |
+          cd /tmp
+          wget https://www.python.org/ftp/python/3.13.5/Python-3.13.5.tgz
+          tar xzf Python-3.13.5.tgz
+          cd Python-3.13.5
+          ./configure --prefix=/opt/python3.13 --with-lto
+          make -j$(nproc)
+          sudo make install
+          sudo tar -czf /tmp/python3.13-aarch64.tar.gz -C /opt python3.13
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python3.13-aarch64
+          path: /tmp/python3.13-aarch64.tar.gz
