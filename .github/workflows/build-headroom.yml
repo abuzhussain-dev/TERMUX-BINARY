@@ -11,23 +11,40 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          cache: 'pip'
 
       - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source $HOME/.cargo/env
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache Rust toolchain and crates
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: rust-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-
+
+      - name: Cache build target
+        uses: actions/cache@v4
+        with:
+          path: src/headroom_ai-*/target
+          key: target-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            target-${{ runner.os }}-
 
       - name: Install maturin
-        run: |
-          source $HOME/.cargo/env
-          pip install maturin
+        run: pip install maturin
 
       - name: Download and build headroom
         run: |
           pip download headroom-ai --no-binary :all: --no-deps -d ./src
           cd src && tar -xzf *.tar.gz
           cd $(find . -mindepth 1 -maxdepth 1 -type d | head -1)
-          source $HOME/.cargo/env
           maturin build --release
 
       - name: Upload wheel
