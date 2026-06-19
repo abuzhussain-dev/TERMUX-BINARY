@@ -5,11 +5,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm  # ← ARM64 runner, no cross-compilation
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -19,12 +16,6 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
-          rustup target add aarch64-unknown-linux-gnu
-
-      - name: Install cross-compilation tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Install maturin
         run: |
@@ -32,17 +23,15 @@ jobs:
           pip install maturin
 
       - name: Download and build headroom
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           pip download headroom-ai --no-binary :all: -d ./src
-          cd src && tar -xzf headroom_ai-*.tar.gz
-          cd headroom_ai-*
+          cd src && tar -xzf *.tar.gz
+          cd $(find . -mindepth 1 -maxdepth 1 -type d | head -1)
           source $HOME/.cargo/env
-          maturin build --release --target aarch64-unknown-linux-gnu
+          maturin build --release
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: headroom-aarch64-wheel
-          path: src/headroom_ai-*/target/wheels/*.whl
+          path: src/*/target/wheels/*.whl
